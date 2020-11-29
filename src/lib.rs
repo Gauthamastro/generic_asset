@@ -166,7 +166,7 @@ use frame_support::{
     decl_event, decl_module, decl_storage, ensure, decl_error,
     traits::{
         Currency, ExistenceRequirement, Imbalance, LockIdentifier, LockableCurrency,
-        ReservableCurrency, SignedImbalance, WithdrawReasons, TryDrop,
+        ReservableCurrency, SignedImbalance, WithdrawReason, TryDrop,
         BalanceStatus,
     },
     Parameter, StorageMap,
@@ -177,7 +177,7 @@ mod mock;
 mod tests;
 
 pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
-use frame_support::traits::Get;
+use frame_support::traits::{Get, WithdrawReasons};
 
 pub trait Trait: frame_system::Trait {
     type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + Debug +
@@ -624,7 +624,7 @@ impl<T: Trait> Module<T> {
         let new_balance = Self::free_balance(asset_id, from)
             .checked_sub(&amount)
             .ok_or(Error::<T>::InsufficientBalance)?;
-        Self::ensure_can_withdraw(asset_id, from, amount, WithdrawReasons::TRANSFER.into(), new_balance)?;
+        Self::ensure_can_withdraw(asset_id, from, amount, WithdrawReason::Transfer.into(), new_balance)?;
 
         if from != to {
             <FreeBalance<T>>::mutate(asset_id, from, |balance| *balance -= amount);
@@ -1285,7 +1285,7 @@ impl<T, U> ReservableCurrency<T::AccountId> for AssetCurrency<T, U>
             .checked_sub(&value)
             .map_or(false, |new_balance|
                 <Module<T>>::ensure_can_withdraw(
-                    &U::asset_id(), who, value, WithdrawReasons::RESERVE.into(), new_balance
+                    &U::asset_id(), who, value, WithdrawReason::Reserve.into(), new_balance
                 ).is_ok()
             )
     }
