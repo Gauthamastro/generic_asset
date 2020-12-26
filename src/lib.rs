@@ -119,12 +119,12 @@
 //! 	dispatch,
 //! 	traits::{Currency, ExistenceRequirement, WithdrawReasons},
 //! };
-//! # pub trait Trait: frame_system::Trait {
+//! # pub trait Config: frame_system::Config {
 //! # 	type Currency: Currency<Self::AccountId>;
 //! # }
-//! type AssetOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+//! type AssetOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 //!
-//! fn charge_fee<T: Trait>(transactor: &T::AccountId, amount: AssetOf<T>) -> dispatch::DispatchResult {
+//! fn charge_fee<T: Config>(transactor: &T::AccountId, amount: AssetOf<T>) -> dispatch::DispatchResult {
 //! 	// ...
 //! 	T::Currency::withdraw(
 //! 		transactor,
@@ -136,7 +136,7 @@
 //! 	Ok(())
 //! }
 //!
-//! fn refund_fee<T: Trait>(transactor: &T::AccountId, amount: AssetOf<T>) -> dispatch::DispatchResult {
+//! fn refund_fee<T: Config>(transactor: &T::AccountId, amount: AssetOf<T>) -> dispatch::DispatchResult {
 //! 	// ...
 //! 	T::Currency::deposit_into_existing(transactor, amount)?;
 //! 	// ...
@@ -166,7 +166,7 @@ use frame_support::{
     decl_event, decl_module, decl_storage, ensure, decl_error,
     traits::{
         Currency, ExistenceRequirement, Imbalance, LockIdentifier, LockableCurrency,
-        ReservableCurrency, SignedImbalance, WithdrawReason, TryDrop,
+        ReservableCurrency, SignedImbalance, WithdrawReasons, TryDrop, Get,
         BalanceStatus,
     },
     Parameter, StorageMap,
@@ -177,24 +177,23 @@ mod mock;
 mod tests;
 
 pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
-use frame_support::traits::{Get, WithdrawReasons};
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
     type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + Debug +
     MaybeSerializeDeserialize;
     type AssetId: Parameter + Member + AtLeast32Bit + Default + Copy;
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type MaxLocks: Get<u32>;
 }
 
-pub trait Subtrait: frame_system::Trait {
+pub trait Subtrait: frame_system::Config {
     type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + Debug +
     MaybeSerializeDeserialize;
     type AssetId: Parameter + Member + AtLeast32Bit + Default + Copy;
     type MaxLocks: Get<u32>;
 }
 
-impl<T: Trait> Subtrait for T {
+impl<T: Config> Subtrait for T {
     type Balance = T::Balance;
     type AssetId = T::AssetId;
     type MaxLocks = T::MaxLocks;
@@ -318,7 +317,7 @@ impl<AccountId> Into<PermissionVersions<AccountId>> for PermissionLatest<Account
 
 decl_error! {
 	/// Error for the generic-asset module.
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// No new assets id available.
 		NoIdAvailable,
 		/// Cannot transfer zero amount.
@@ -349,7 +348,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -435,7 +434,7 @@ pub struct BalanceLock<Balance> {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as GenericAsset {
+	trait Store for Module<T: Config> as GenericAsset {
 		/// Total issuance of a given asset.
 		///
 		/// TWOX-NOTE: `AssetId` is trusted.
@@ -492,10 +491,10 @@ decl_storage! {
 
 decl_event!(
 	pub enum Event<T> where
-		<T as frame_system::Trait>::AccountId,
-		<T as Trait>::Balance,
-		<T as Trait>::AssetId,
-		AssetOptions = AssetOptions<<T as Trait>::Balance, <T as frame_system::Trait>::AccountId>
+		<T as frame_system::Config>::AccountId,
+		<T as Config>::Balance,
+		<T as Config>::AssetId,
+		AssetOptions = AssetOptions<<T as Config>::Balance, <T as frame_system::Config>::AccountId>
 	{
 		/// Asset created. [asset_id, creator, asset_options]
 		Created(AssetId, AccountId, AssetOptions),
@@ -510,7 +509,7 @@ decl_event!(
 	}
 );
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
     // PUBLIC IMMUTABLES
 
     /// Get an account's total balance of an asset kind.
@@ -624,7 +623,7 @@ impl<T: Trait> Module<T> {
         let new_balance = Self::free_balance(asset_id, from)
             .checked_sub(&amount)
             .ok_or(Error::<T>::InsufficientBalance)?;
-        Self::ensure_can_withdraw(asset_id, from, amount, WithdrawReason::Transfer.into(), new_balance)?;
+        Self::ensure_can_withdraw(asset_id, from, amount, WithdrawReasons::TRANSFER, new_balance)?;
 
         if from != to {
             <FreeBalance<T>>::mutate(asset_id, from, |balance| *balance -= amount);
@@ -1114,7 +1113,7 @@ impl<T: Subtrait> PartialEq for ElevatedTrait<T> {
     }
 }
 impl<T: Subtrait> Eq for ElevatedTrait<T> {}
-impl<T: Subtrait> frame_system::Trait for ElevatedTrait<T> {
+impl<T: Subtrait> frame_system::Config for ElevatedTrait<T> {
     type BaseCallFilter = T::BaseCallFilter;
     type Origin = T::Origin;
     type Call = T::Call;
@@ -1127,21 +1126,17 @@ impl<T: Subtrait> frame_system::Trait for ElevatedTrait<T> {
     type Header = T::Header;
     type Event = ();
     type BlockHashCount = T::BlockHashCount;
-    type MaximumBlockWeight = T::MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = T::MaximumBlockWeight;
-    type MaximumBlockLength = T::MaximumBlockLength;
-    type AvailableBlockRatio = T::AvailableBlockRatio;
     type Version = T::Version;
     type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type PalletInfo = ();
+    type BlockWeights = T::BlockWeights;
+    type BlockLength = T::BlockLength;
 }
-impl<T: Subtrait> Trait for ElevatedTrait<T> {
+impl<T: Subtrait> Config for ElevatedTrait<T> {
     type Balance = T::Balance;
     type AssetId = T::AssetId;
     type Event = ();
@@ -1153,7 +1148,7 @@ pub struct AssetCurrency<T, U>(sp_std::marker::PhantomData<T>, sp_std::marker::P
 
 impl<T, U> Currency<T::AccountId> for AssetCurrency<T, U>
     where
-        T: Trait,
+        T: Config,
         U: AssetIdProvider<AssetId = T::AssetId>,
 {
     type Balance = T::Balance;
@@ -1277,7 +1272,7 @@ impl<T, U> Currency<T::AccountId> for AssetCurrency<T, U>
 
 impl<T, U> ReservableCurrency<T::AccountId> for AssetCurrency<T, U>
     where
-        T: Trait,
+        T: Config,
         U: AssetIdProvider<AssetId = T::AssetId>,
 {
     fn can_reserve(who: &T::AccountId, value: Self::Balance) -> bool {
@@ -1285,7 +1280,7 @@ impl<T, U> ReservableCurrency<T::AccountId> for AssetCurrency<T, U>
             .checked_sub(&value)
             .map_or(false, |new_balance|
                 <Module<T>>::ensure_can_withdraw(
-                    &U::asset_id(), who, value, WithdrawReason::Reserve.into(), new_balance
+                    &U::asset_id(), who, value, WithdrawReasons::RESERVE, new_balance
                 ).is_ok()
             )
     }
@@ -1322,7 +1317,7 @@ impl<T, U> ReservableCurrency<T::AccountId> for AssetCurrency<T, U>
 
 pub struct StakingAssetIdProvider<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: Trait> AssetIdProvider for StakingAssetIdProvider<T> {
+impl<T: Config> AssetIdProvider for StakingAssetIdProvider<T> {
     type AssetId = T::AssetId;
     fn asset_id() -> Self::AssetId {
         <Module<T>>::staking_asset_id()
@@ -1331,7 +1326,7 @@ impl<T: Trait> AssetIdProvider for StakingAssetIdProvider<T> {
 
 pub struct SpendingAssetIdProvider<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: Trait> AssetIdProvider for SpendingAssetIdProvider<T> {
+impl<T: Config> AssetIdProvider for SpendingAssetIdProvider<T> {
     type AssetId = T::AssetId;
     fn asset_id() -> Self::AssetId {
         <Module<T>>::spending_asset_id()
@@ -1340,7 +1335,7 @@ impl<T: Trait> AssetIdProvider for SpendingAssetIdProvider<T> {
 
 impl<T> LockableCurrency<T::AccountId> for AssetCurrency<T, StakingAssetIdProvider<T>>
     where
-        T: Trait,
+        T: Config,
         T::Balance: MaybeSerializeDeserialize + Debug,
 {
     type Moment = T::BlockNumber;
