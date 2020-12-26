@@ -904,7 +904,7 @@ fn update_permission_should_throw_error_when_lack_of_permissions() {
 fn create_asset_works_with_given_asset_id_and_from_account() {
     ExtBuilder::default().next_asset_id(10).build().execute_with(|| {
         let origin = 1;
-        let from_account: Option<<Test as frame_system::Trait>::AccountId> = Some(1);
+        let from_account: Option<<Test as frame_system::Config>::AccountId> = Some(1);
 
         let default_permission = PermissionLatest {
             update: Owner::Address(origin),
@@ -941,7 +941,7 @@ fn create_asset_works_with_given_asset_id_and_from_account() {
 fn create_asset_with_non_reserved_asset_id_should_not_work() {
     ExtBuilder::default().next_asset_id(10).build().execute_with(|| {
         let origin = 1;
-        let from_account: Option<<Test as frame_system::Trait>::AccountId> = Some(1);
+        let from_account: Option<<Test as frame_system::Config>::AccountId> = Some(1);
 
         let default_permission = PermissionLatest {
             update: Owner::Address(origin),
@@ -975,7 +975,7 @@ fn create_asset_with_non_reserved_asset_id_should_not_work() {
 fn create_asset_with_a_taken_asset_id_should_not_work() {
     ExtBuilder::default().next_asset_id(10).build().execute_with(|| {
         let origin = 1;
-        let from_account: Option<<Test as frame_system::Trait>::AccountId> = Some(1);
+        let from_account: Option<<Test as frame_system::Config>::AccountId> = Some(1);
 
         let default_permission = PermissionLatest {
             update: Owner::Address(origin),
@@ -1020,7 +1020,7 @@ fn create_asset_with_a_taken_asset_id_should_not_work() {
 fn create_asset_should_create_a_reserved_asset_when_from_account_is_none() {
     ExtBuilder::default().next_asset_id(10).build().execute_with(|| {
         let origin = 1;
-        let from_account: Option<<Test as frame_system::Trait>::AccountId> = None;
+        let from_account: Option<<Test as frame_system::Config>::AccountId> = None;
 
         let default_permission = PermissionLatest {
             update: Owner::Address(origin),
@@ -1063,7 +1063,7 @@ fn create_asset_should_create_a_reserved_asset_when_from_account_is_none() {
 fn create_asset_should_create_a_user_asset() {
     ExtBuilder::default().next_asset_id(10).build().execute_with(|| {
         let origin = 1;
-        let from_account: Option<<Test as frame_system::Trait>::AccountId> = None;
+        let from_account: Option<<Test as frame_system::Config>::AccountId> = None;
 
         let default_permission = PermissionLatest {
             update: Owner::Address(origin),

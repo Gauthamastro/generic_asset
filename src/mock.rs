@@ -38,8 +38,6 @@ impl_outer_origin! {
 pub struct Test;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = 1024;
-	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
 impl frame_system::Config for Test {
@@ -54,13 +52,7 @@ impl frame_system::Config for Test {
     type Lookup = IdentityLookup<u64>;
     type Header = Header;
     type Event = TestEvent;
-    type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type AccountData = ();
@@ -68,6 +60,8 @@ impl frame_system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type PalletInfo = ();
+    type BlockWeights = ();
+    type BlockLength = ();
 }
 parameter_types! {
 pub const MaxLocks: u32 = 10;
