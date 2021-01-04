@@ -1127,6 +1127,7 @@ impl<T: Subtrait> frame_system::Config for ElevatedTrait<T> {
     type Event = ();
     type BlockHashCount = T::BlockHashCount;
     type DbWeight = ();
+    type SS58Prefix = ();
     type Version = T::Version;
     type AccountData = ();
     type OnNewAccount = ();
